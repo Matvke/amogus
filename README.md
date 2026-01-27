@@ -25,3 +25,14 @@ Linux/MacOS
     4) Скопируй значение `id_token` в .env в поле token
 8. Запусти TUI приложение
 `python3 tui-app.py` 
+
+## Структура файлов
+```
+├── api_methods.py   # <---- Методы для работы с API Modeus 
+├── entities.py      # <---- Сущности для работы с API Modeus
+├── LICENSE
+├── README.md
+├── requirements.txt # <---- Python зависимости
+├── settings.py      # <---- Настройки приложения (Чтение .env)
+└── tui-app.py       # <---- Отрисовка TUI
+```
