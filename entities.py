@@ -15,15 +15,13 @@ class Team(BaseModel):
     name: str
     totalSeats: int
     professors: list[Professor]
-    cycle_id: UUID4 | None = None
-
+    lesson_id: UUID4 | None = None
     model_config = ConfigDict(extra="ignore")
 
     def __repr__(self) -> str:
         return (
             f"{Fore.BLUE}Команда: {Style.RESET_ALL}{self.name} "
-            f"({Fore.BLUE}ID:{Style.RESET_ALL} {self.id}, "
-            f"{Fore.BLUE}Мест:{Style.RESET_ALL} {self.totalSeats})"
+            f"({Fore.BLUE}ID:{Style.RESET_ALL} {self.id})"
         )
 
     def __str__(self):

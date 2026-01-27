@@ -37,18 +37,20 @@ class MenuTree(Tree):
         super().__init__(label)
         self.electives = self.root.add("Дисциплины")
         for elective in get_electives(settings.menu_id):
-            elective_node = self.electives.add(label=elective.name, data=elective)
+            elective_node = self.electives.add(label=f"{elective.name}", data=elective)
             for lesson in elective.children:
-                elective_node.add(label=lesson.name, data=lesson)
+                elective_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
 
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
-        if node.data and isinstance(node.data, Lesson):
+        if node.data and isinstance(node.data, Lesson) and not node.children:
             cycles = get_cycles(settings.menu_id, lesson_id=node.data.id)
             for cycle in cycles:
-                lesson_node = node.add(label=cycle.name, data=cycle)
+                lesson_node = node.add(label=f"{cycle.name}", data=cycle)
                 for team in cycle.teams:
-                    team_node = lesson_node.add(label=team.name, data=team)
+                    team_node = lesson_node.add(
+                        label=f"{team.name} {team.id}", data=team
+                    )
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
 
@@ -60,7 +62,7 @@ class MenuTree(Tree):
                 name=node.data.name,
                 totalSeats=node.data.totalSeats,
                 professors=node.data.professors,
-                cycle_id=node.parent.data.id,
+                lesson_id=node.parent.parent.data.id,
             )
             selected_items.append(team)
 
@@ -80,11 +82,12 @@ class AmogusApp(App):
     def action_save_disciplines(self) -> None:
         with open("disciplines.json", "w") as file:
             for team in selected_items._unique_teams:
+                team: Team
                 # TODO: Структура body для Post
                 # запроса для записи на курс состоит из
                 # 2 частей (3 для дисциплин с лекциями)
-                # Поэтому нужно сохранять все в виде: ["id cycle", "id team (лекции)", "id team (практики)"]
-                file.write(f"{team.id}")
+                # Поэтому нужно сохранять все в виде: ["id lesson", "id team (лекции)", "id team (практики)"]
+                file.write(f"{team.lesson_id}, {team.id}\n")
             self.notify("Сохранено в disciplines.json")
 
 
