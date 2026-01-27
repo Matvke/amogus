@@ -2,14 +2,14 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, Tree
 
 from api_methods import get_electives, get_lessons
+from settings import settings
 
 
 class MyTree(Tree):
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
         if node.data and node.data[0] == "lesson":
-            menu_id = "1a973e20-232c-4328-8329-77afe804f49e"
-            lessons = get_lessons(menu_id, lesson_id=node.data[1])
+            lessons = get_lessons(settings.menu_id, lesson_id=node.data[1])
             for lesson in lessons:
                 lesson_node = node.add(label=lesson.name, data=("cycle", lesson.id))
                 for team in lesson.teams:
@@ -20,10 +20,9 @@ class MyTree(Tree):
 
 class AmogusApp(App):
     def compose(self) -> ComposeResult:
-        menu_id = "1a973e20-232c-4328-8329-77afe804f49e"
         tree: MyTree[str] = MyTree("Меню выбора")
         electives = tree.root.add("Дисциплины")
-        for elective in get_electives(menu_id):
+        for elective in get_electives(settings.menu_id):
             elective_node = electives.add(
                 label=elective.name, data=("elective", elective.id)
             )
