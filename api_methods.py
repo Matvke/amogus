@@ -15,7 +15,7 @@ def get_electives(menu_id: str):
     return electives
 
 
-def get_lessons(menu_id: str, lesson_id: str):
+def get_cycles(menu_id: str, lesson_id: str):
     url = f"https://urfu.modeus.org/learning-path-selection/api/selection/menus/{menu_id}/items/{lesson_id}"
     response = requests.get(url=url, headers=settings.get_headers())
     cycles_json = response.json()["cycles"]

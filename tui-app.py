@@ -2,7 +2,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Tree
 
-from api_methods import get_electives, get_lessons
+from api_methods import get_cycles, get_electives
 from entities import Lesson, Team
 from settings import settings
 
@@ -10,14 +10,14 @@ from settings import settings
 class SelectedList(ListView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._unique_items = set()
+        self._unique_teams = list()
 
-    def append(self, item_data):
+    def append(self, item_data: Team):
         item_str = str(item_data)
-        if item_str in self._unique_items:
+        if item_data in self._unique_teams:
             return
 
-        self._unique_items.add(item_str)
+        self._unique_teams.append(item_data)
 
         new_item = ListItem(Label(item_str))
         new_item.data = item_data
@@ -44,10 +44,10 @@ class MenuTree(Tree):
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
         if node.data and isinstance(node.data, Lesson):
-            lessons = get_lessons(settings.menu_id, lesson_id=node.data.id)
-            for lesson in lessons:
-                lesson_node = node.add(label=lesson.name, data=lesson)
-                for team in lesson.teams:
+            cycles = get_cycles(settings.menu_id, lesson_id=node.data.id)
+            for cycle in cycles:
+                lesson_node = node.add(label=cycle.name, data=cycle)
+                for team in cycle.teams:
                     team_node = lesson_node.add(label=team.name, data=team)
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
@@ -55,15 +55,37 @@ class MenuTree(Tree):
     def action_set_discipline(self) -> None:
         node = self.cursor_node
         if node.data and isinstance(node.data, Team):
-            selected_items.append(node.data)
+            team = Team(
+                id=node.data.id,
+                name=node.data.name,
+                totalSeats=node.data.totalSeats,
+                professors=node.data.professors,
+                cycle_id=node.parent.data.id,
+            )
+            selected_items.append(team)
 
 
 class AmogusApp(App):
+    BINDINGS = [
+        *App.BINDINGS,
+        Binding("ctrl+x", "save_disciplines", "Сохранить команды", show=True),
+    ]
+
     def compose(self) -> ComposeResult:
         yield MenuTree("Меню выбора")
         yield selected_items
         yield Header()
         yield Footer()
+
+    def action_save_disciplines(self) -> None:
+        with open("disciplines.json", "w") as file:
+            for team in selected_items._unique_teams:
+                # TODO: Структура body для Post
+                # запроса для записи на курс состоит из
+                # 2 частей (3 для дисциплин с лекциями)
+                # Поэтому нужно сохранять все в виде: ["id cycle", "id team (лекции)", "id team (практики)"]
+                file.write(f"{team.id}")
+            self.notify("Сохранено в disciplines.json")
 
 
 if __name__ == "__main__":
