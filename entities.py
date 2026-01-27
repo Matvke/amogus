@@ -18,13 +18,16 @@ class Team(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
-            f"\n{Fore.BLUE}Команда: {Style.RESET_ALL}{self.name} "
-            f"({Fore.BLUE}ID:{Style.RESET_ALL} {self.id}, "
-            f"{Fore.BLUE}Мест:{Style.RESET_ALL} {self.totalSeats}, "
-            f"{Fore.BLUE}Преподаватели:{Style.RESET_ALL} [{self.professors}])"
+            f"{Fore.BLUE}Команда: {Style.RESET_ALL}{self.name} "
+            f"({Fore.BLUE}ID:{Style.RESET_ALL} {self.id})"
+            # f"{Fore.BLUE}Мест:{Style.RESET_ALL} {self.totalSeats}, "
+            # f"{Fore.BLUE}Преподаватели:{Style.RESET_ALL} [{self.professors}])"
         )
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Cycle(BaseModel):
