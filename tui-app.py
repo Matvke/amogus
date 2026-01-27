@@ -10,17 +10,18 @@ from settings import settings
 class SelectedList(ListView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._unique_teams = list()
+        self._unique_teams = dict()  # lesson_id: [team_id]
 
-    def append(self, item_data: Team):
-        item_str = str(item_data)
-        if item_data in self._unique_teams:
-            return
-
-        self._unique_teams.append(item_data)
-
+    def append(self, team: Team):
+        item_str = str(team)
+        if team.lesson_id in self._unique_teams.keys():
+            if team.id in self._unique_teams[team.lesson_id]:
+                return
+            self._unique_teams[team.lesson_id].append(team.id)
+        else:
+            self._unique_teams[team.lesson_id] = [team.id]
         new_item = ListItem(Label(item_str))
-        new_item.data = item_data
+        new_item.data = team
         super().append(new_item)
 
 
@@ -81,13 +82,12 @@ class AmogusApp(App):
 
     def action_save_disciplines(self) -> None:
         with open("disciplines.json", "w") as file:
-            for team in selected_items._unique_teams:
-                team: Team
+            for lesson_id, teams in selected_items._unique_teams.items():
                 # TODO: Структура body для Post
                 # запроса для записи на курс состоит из
                 # 2 частей (3 для дисциплин с лекциями)
                 # Поэтому нужно сохранять все в виде: ["id lesson", "id team (лекции)", "id team (практики)"]
-                file.write(f"{team.lesson_id}, {team.id}\n")
+                file.write(f"{lesson_id} {' '.join(list(map(str, teams)))}")
             self.notify("Сохранено в disciplines.json")
 
 
