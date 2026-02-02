@@ -23,6 +23,7 @@ class SelectedItems:
 
 
 selected_items = SelectedItems()
+pretty = Pretty(selected_items._unique_teams)
 
 
 class MenuTree(Tree):
@@ -70,9 +71,13 @@ class MenuTree(Tree):
                 lesson_id=node.parent.parent.data.id,
             )
             selected_items.append(team)
+            self.notify("Выбрано")
+            pretty.refresh(layout=True)
         else:
             self.notify("Ошибка", severity="error")
-        self.notify("Выбрано")
+
+
+menu = MenuTree("Меню выбора")
 
 
 class AmogusApp(App):
@@ -84,10 +89,11 @@ class AmogusApp(App):
 
     def compose(self) -> ComposeResult:
         with TabbedContent():
-            with TabPane("Json", id="pretty-tab"):
-                yield MenuTree("Меню выбора")
             with TabPane("Tree", id="menu-tab"):
-                yield Pretty(selected_items._unique_teams)
+                yield menu
+            with TabPane("Json", id="pretty-tab"):
+                yield pretty
+
         yield Header()
         yield Footer()
 
@@ -99,6 +105,7 @@ class AmogusApp(App):
                     Team.model_validate(team) for team in teams
                 ]
         self.notify("Выгружено из disciplines.json")
+        pretty.refresh(layout=True)
 
     def action_save_disciplines(self) -> None:
         serializable_dict = {}
