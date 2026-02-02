@@ -1,5 +1,5 @@
 from colorama import Fore, Style
-from pydantic import UUID4, BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
 class Professor(BaseModel):
@@ -11,11 +11,11 @@ class Professor(BaseModel):
 
 
 class Team(BaseModel):
-    id: UUID4
+    id: str
     name: str
     totalSeats: int
     professors: list[Professor]
-    lesson_id: UUID4 | None = None
+    lesson_id: str | None = None
     model_config = ConfigDict(extra="ignore")
 
     def __repr__(self) -> str:
@@ -29,7 +29,7 @@ class Team(BaseModel):
 
 
 class Cycle(BaseModel):
-    id: UUID4
+    id: str
     name: str
     teams: list[Team]
     model_config = ConfigDict(extra="ignore")
@@ -43,7 +43,7 @@ class Cycle(BaseModel):
 
 
 class Lesson(BaseModel):
-    id: UUID4
+    id: str
     name: str
 
     model_config = ConfigDict(extra="ignore")
@@ -53,7 +53,7 @@ class Lesson(BaseModel):
 
 
 class Elective(BaseModel):
-    id: UUID4
+    id: str
     name: str
     children: list[Lesson]
 

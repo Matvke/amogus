@@ -10,9 +10,14 @@ def get_electives(menu_id: str):
         f"https://urfu.modeus.org/learning-path-selection/api/selection/menus/{menu_id}"
     )
     response = requests.get(url=url, headers=settings.get_headers())
-    electives_json = response.json()["electives"]["items"]
-    electives = [Elective.model_validate(e) for e in electives_json]
-    return electives
+    if response.status_code == 200:
+        electives_json = response.json()["electives"]["items"]
+        electives = [Elective.model_validate(e) for e in electives_json]
+        return electives
+    if response.status_code == 404:
+        raise ValueError("Некорректный menu_id")
+    if response.status_code == 401:
+        raise ValueError("Некорректный token")
 
 
 def get_cycles(menu_id: str, lesson_id: str):
