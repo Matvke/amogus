@@ -1,31 +1,28 @@
+import json
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header, Label, ListItem, ListView, Tree
+from textual.widgets import Footer, Header, Pretty, TabbedContent, TabPane, Tree
 
 from api_methods import get_cycles, get_electives
 from entities import Lesson, Team
 from settings import settings
 
 
-class SelectedList(ListView):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._unique_teams = dict()  # lesson_id: [team_id]
+class SelectedItems:
+    def __init__(self):
+        self._unique_teams = dict()  # lesson_id: [team]
 
     def append(self, team: Team):
-        item_str = str(team)
         if team.lesson_id in self._unique_teams.keys():
-            if team.id in self._unique_teams[team.lesson_id]:
+            if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
                 return
-            self._unique_teams[team.lesson_id].append(team.id)
+            self._unique_teams[team.lesson_id].append(team)
         else:
-            self._unique_teams[team.lesson_id] = [team.id]
-        new_item = ListItem(Label(item_str))
-        new_item.data = team
-        super().append(new_item)
+            self._unique_teams[team.lesson_id] = [team]
 
 
-selected_items = SelectedList(ListItem(Label("Выбранные команды")))
+selected_items = SelectedItems()
 
 
 class MenuTree(Tree):
@@ -49,8 +46,15 @@ class MenuTree(Tree):
             for cycle in cycles:
                 lesson_node = node.add(label=f"{cycle.name}", data=cycle)
                 for team in cycle.teams:
+                    new_team = Team(
+                        id=team.id,
+                        name=team.name,
+                        totalSeats=team.totalSeats,
+                        professors=team.professors,
+                        lesson_id=lesson_node.data.id,
+                    )
                     team_node = lesson_node.add(
-                        label=f"{team.name} {team.id}", data=team
+                        label=f"{team.name} {team.id}", data=new_team
                     )
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
@@ -66,29 +70,44 @@ class MenuTree(Tree):
                 lesson_id=node.parent.parent.data.id,
             )
             selected_items.append(team)
+        else:
+            self.notify("Ошибка", severity="error")
+        self.notify("Выбрано")
 
 
 class AmogusApp(App):
     BINDINGS = [
         *App.BINDINGS,
         Binding("ctrl+x", "save_disciplines", "Сохранить команды", show=True),
+        Binding("ctrl+z", "load_disciplines", "Загрузить команды", show=True),
     ]
 
     def compose(self) -> ComposeResult:
-        yield MenuTree("Меню выбора")
-        yield selected_items
+        with TabbedContent():
+            with TabPane("Json", id="pretty-tab"):
+                yield MenuTree("Меню выбора")
+            with TabPane("Tree", id="menu-tab"):
+                yield Pretty(selected_items._unique_teams)
         yield Header()
         yield Footer()
 
+    def action_load_disciplines(self) -> None:
+        with open("disciplines.json", "r", encoding="utf-8") as file:
+            deseralizable_dict = json.load(file)
+            for lesson_id, teams in deseralizable_dict.items():
+                selected_items._unique_teams[lesson_id] = [
+                    Team.model_validate(team) for team in teams
+                ]
+        self.notify("Выгружено из disciplines.json")
+
     def action_save_disciplines(self) -> None:
-        with open("disciplines.json", "w") as file:
-            for lesson_id, teams in selected_items._unique_teams.items():
-                # TODO: Структура body для Post
-                # запроса для записи на курс состоит из
-                # 2 частей (3 для дисциплин с лекциями)
-                # Поэтому нужно сохранять все в виде: ["id lesson", "id team (лекции)", "id team (практики)"]
-                file.write(f"{lesson_id} {' '.join(list(map(str, teams)))}")
-            self.notify("Сохранено в disciplines.json")
+        serializable_dict = {}
+        for lesson_id, teams in selected_items._unique_teams.items():
+            serializable_dict[lesson_id] = [team.dict() for team in teams]
+
+        with open("disciplines.json", "w", encoding="utf-8") as file:
+            json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
+        self.notify("Сохранено в disciplines.json")
 
 
 if __name__ == "__main__":
