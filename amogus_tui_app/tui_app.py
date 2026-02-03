@@ -5,9 +5,9 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Log, Pretty, TabbedContent, TabPane, Tree
 
-from api_methods import get_cycles, get_electives, post_lesson
-from entities import Lesson, Team
-from settings import settings
+from .api_methods import get_cycles, get_electives, post_lesson
+from .entities import Lesson, Team
+from .settings import settings
 
 logs = Log()
 
@@ -152,8 +152,3 @@ class AmogusApp(App):
                 logs.write_line(
                     f"{Fore.RED}[ОШИБКА {response.status_code}] для {payload[0]}: {response_data}{Style.RESET_ALL}"
                 )
-
-
-if __name__ == "__main__":
-    app = AmogusApp()
-    app.run()

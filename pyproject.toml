@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amogus-tui-app"
+version = "0.1.0"
+description = "Приложение для записи на курсы Modus"
+authors = [{name = "Matvey Butolin", email = "matvei31055@gmail.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+
+dependencies = [
+    "requests>=2.28.0",
+    "rich>=13.0.0",
+    "textual>=0.41.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+amogus = "amogus_tui_app:main"
