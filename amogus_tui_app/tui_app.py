@@ -4,11 +4,20 @@ from colorama import Fore, Style
 from requests.exceptions import ReadTimeout
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header, Log, Pretty, TabbedContent, TabPane, Tree
+from textual.widgets import (
+    Footer,
+    Header,
+    Log,
+    Pretty,
+    TabbedContent,
+    TabPane,
+    Tree,
+)
 
 from .api_methods import get_cycles, get_electives, post_lesson
 from .entities import Lesson, Team
 from .settings import settings
+from .timer import BackgroundTimer
 
 logs = Log()
 
@@ -17,17 +26,27 @@ class SelectedItems:
     def __init__(self):
         self._unique_teams = dict()  # lesson_id: [team]
 
-    def append(self, team: Team):
+    def append(self, team: Team) -> bool:
         logs.write_line("Trying to add team")
         if team.lesson_id in self._unique_teams.keys():
             if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
                 logs.write_line("Team already exists")
-                return
+                return False
             self._unique_teams[team.lesson_id].append(team)
             logs.write_line(f"Append team to {team.lesson_id}")
         else:
             self._unique_teams[team.lesson_id] = [team]
             logs.write_line(f"Init {team.lesson_id}")
+        return True
+
+    def delete(self, team: Team) -> True:
+        logs.write_line("Trying to delete team")
+        if team.lesson_id in self._unique_teams.keys():
+            if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
+                logs.write_line("Delete team")
+                self._unique_teams[team.lesson_id].remove(team)
+                return True
+        return False
 
 
 selected_items = SelectedItems()
@@ -37,6 +56,7 @@ class MenuTree(Tree):
     BINDINGS = [
         *Tree.BINDINGS,
         Binding("ctrl+s", "set_discipline", "Выбрать", show=True),
+        Binding("ctrl+d", "delete_discipline", "Удалить", show=True),
     ]
 
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
@@ -59,7 +79,8 @@ class MenuTree(Tree):
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
             logs.write_line(f"Cycles successfully loaded. Lesson id = {node.data.id}")
-        if node.id == 0:
+
+        elif node.id == 0 and not node.children:
             self.electives = self.root.add("Дисциплины")
             electives_list = []
             try:
@@ -87,13 +108,39 @@ class MenuTree(Tree):
                 professors=node.data.professors,
                 lesson_id=node.parent.parent.data.id,
             )
-            selected_items.append(team)
-            self.notify("Выбрано")
-            logs.write_line("Disciplines successfully set")
-            pretty.refresh(layout=True)
+            response = selected_items.append(team)
+            if response:
+                self.notify("Выбрано")
+                logs.write_line("Disciplines successfully set")
+                pretty.refresh(layout=True)
+            else:
+                self.notify("Ошибка, уже выбрано", severity="error")
+
         else:
-            self.notify("Ошибка", severity="error")
+            self.notify("Ошибка, не команда", severity="error")
             logs.write_line("Disciplines set error. IsNotDiscipline")
+
+    def action_delete_discipline(self) -> None:
+        node = self.cursor_node
+        if node.data and isinstance(node.data, Team):
+            team = Team(
+                id=node.data.id,
+                name=node.data.name,
+                totalSeats=node.data.totalSeats,
+                professors=node.data.professors,
+                lesson_id=node.parent.parent.data.id,
+            )
+            respone = selected_items.delete(team)
+            if respone:
+                self.notify("Удалено")
+                logs.write_line("Disciplines successfully delete")
+                pretty.refresh(layout=True)
+            else:
+                self.notify("Ошибка, не существует", severity="error")
+
+        else:
+            self.notify("Ошибка, не команда", severity="error")
+            logs.write_line("Disciplines delete error. IsNotDiscipline")
 
 
 menu = MenuTree("Меню выбора")
@@ -128,8 +175,7 @@ class AmogusApp(App):
                     Team.model_validate(team) for team in teams
                 ]
         self.notify("Выгружено из disciplines.json")
-        logs.write_line("Succesfully loaded from file")
-
+        logs.write_line("Successfully loaded from file")
         pretty.refresh(layout=True)
 
     def action_save_disciplines(self) -> None:
@@ -140,9 +186,20 @@ class AmogusApp(App):
         with open("disciplines.json", "w", encoding="utf-8") as file:
             json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
         self.notify("Сохранено в disciplines.json")
-        logs.write_line("Succesfully save to file")
+        logs.write_line("Successfully save to file")
 
     def action_push_disciplines(self) -> None:
+        pick_time = settings.pick_time.split(":")
+        BackgroundTimer(
+            hour=pick_time[0], minute=pick_time[1], func=self.push_disciplines
+        )
+        self.notify(f"Установлен таймер {settings.pick_time}")
+        logs.write_line(f"Timer set {settings.pick_time}")
+
+    def push_disciplines(self):
+        logs.write_line("Start pushing")
+        self.notify("Начинаю записывать")
+
         for lesson_id, teams in selected_items._unique_teams.items():
             payload = [lesson_id]
             for team in teams:

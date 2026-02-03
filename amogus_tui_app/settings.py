@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     token: str
     menu_id: str
+    pick_time: str
 
     model_config = SettingsConfigDict(env_file=".env")
 
