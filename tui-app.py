@@ -1,10 +1,11 @@
 import json
 
+from colorama import Fore, Style
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Log, Pretty, TabbedContent, TabPane, Tree
 
-from api_methods import get_cycles, get_electives
+from api_methods import get_cycles, get_electives, post_lesson
 from entities import Lesson, Team
 from settings import settings
 
@@ -16,16 +17,16 @@ class SelectedItems:
         self._unique_teams = dict()  # lesson_id: [team]
 
     def append(self, team: Team):
-        logs.write("Trying to add team\n")
+        logs.write_line("Trying to add team")
         if team.lesson_id in self._unique_teams.keys():
             if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
-                logs.write("Team already exists\n")
+                logs.write_line("Team already exists")
                 return
             self._unique_teams[team.lesson_id].append(team)
-            logs.write(f"Append team to {team.lesson_id}\n")
+            logs.write_line(f"Append team to {team.lesson_id}")
         else:
             self._unique_teams[team.lesson_id] = [team]
-            logs.write(f"Init {team.lesson_id}\n")
+            logs.write_line(f"Init {team.lesson_id}")
 
 
 selected_items = SelectedItems()
@@ -64,7 +65,7 @@ class MenuTree(Tree):
                     )
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
-            logs.write(f"Cycles successfully loaded. Lesson id = {node.data.id}\n")
+            logs.write_line(f"Cycles successfully loaded. Lesson id = {node.data.id}")
 
     def action_set_discipline(self) -> None:
         node = self.cursor_node
@@ -78,11 +79,11 @@ class MenuTree(Tree):
             )
             selected_items.append(team)
             self.notify("Выбрано")
-            logs.write("Disciplines successfully set\n")
+            logs.write_line("Disciplines successfully set")
             pretty.refresh(layout=True)
         else:
             self.notify("Ошибка", severity="error")
-            logs.write("Disciplines set error. IsNotDiscipline\n")
+            logs.write_line("Disciplines set error. IsNotDiscipline")
 
 
 menu = MenuTree("Меню выбора")
@@ -94,6 +95,7 @@ class AmogusApp(App):
         *App.BINDINGS,
         Binding("ctrl+x", "save_disciplines", "Сохранить команды", show=True),
         Binding("ctrl+z", "load_disciplines", "Загрузить команды", show=True),
+        Binding("ctrl+v", "push_disciplines", "Записаться", show=True),
     ]
 
     def compose(self) -> ComposeResult:
@@ -116,7 +118,7 @@ class AmogusApp(App):
                     Team.model_validate(team) for team in teams
                 ]
         self.notify("Выгружено из disciplines.json")
-        logs.write("Succesfully loaded from file\n")
+        logs.write_line("Succesfully loaded from file")
 
         pretty.refresh(layout=True)
 
@@ -128,7 +130,28 @@ class AmogusApp(App):
         with open("disciplines.json", "w", encoding="utf-8") as file:
             json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
         self.notify("Сохранено в disciplines.json")
-        logs.write("Succesfully save to file\n")
+        logs.write_line("Succesfully save to file")
+
+    def action_push_disciplines(self) -> None:
+        for lesson_id, teams in selected_items._unique_teams.items():
+            payload = [lesson_id]
+            for team in teams:
+                payload.append(team.id)
+            logs.write_line(f"Payload set: {payload}")
+            response = post_lesson(settings.menu_id, payload)
+            response_data = response.json()
+            if response.status_code == 200:
+                logs.write_line(
+                    f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {payload[0]}.{Style.RESET_ALL}"
+                )
+                if response_data.get("errors"):
+                    logs.write_lines(
+                        f"{Fore.YELLOW}Но есть предупреждения: {response_data['errors']}{Style.RESET_ALL}"
+                    )
+            else:
+                logs.write_line(
+                    f"{Fore.RED}[ОШИБКА {response.status_code}] для {payload[0]}: {response_data}{Style.RESET_ALL}"
+                )
 
 
 if __name__ == "__main__":

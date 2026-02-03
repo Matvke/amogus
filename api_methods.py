@@ -1,5 +1,4 @@
 import requests
-from colorama import Fore, Style
 
 from entities import Cycle, Elective
 from settings import settings
@@ -28,19 +27,14 @@ def get_cycles(menu_id: str, lesson_id: str):
     return cycles
 
 
-def post_lesson(
-    menu_id,
-    lesson_id: str | None = None,
-    lecture_id: str | None = None,
-    practice_id: str | None = None,
-):
+def post_lesson(menu_id, payload: list = None) -> requests.Response:
     url = f"https://urfu.modeus.org/learning-path-selection/api/menus/{menu_id}/elements/select"
-    json = [lesson_id, lecture_id, practice_id]
 
-    response = requests.post(url=url, headers=settings.get_headers(), json=json)
-    if response.status_code == 200:
-        print(
-            f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {lesson_id}.{Style.RESET_ALL}"
-        )
-    else:
-        print(response.text)
+    response = requests.post(url=url, headers=settings.get_headers(), json=payload)
+    return response
+    # if response.status_code == 200:
+    #     print(
+    #         f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {payload[0]}.{Style.RESET_ALL}"
+    #     )
+    # else:
+    #     print(response.text)
