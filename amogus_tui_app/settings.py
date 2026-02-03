@@ -1,12 +1,11 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     token: str
     menu_id: str
     pick_time: str
-
-    model_config = SettingsConfigDict(env_file=".env")
+    user: None | str = None
 
     def get_headers(self):
         return {
@@ -21,6 +20,3 @@ class Settings(BaseSettings):
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
         }
-
-
-settings = Settings()

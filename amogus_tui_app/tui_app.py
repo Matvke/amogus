@@ -16,7 +16,7 @@ from textual.widgets import (
 
 from .api_methods import get_cycles, get_electives, post_lesson
 from .entities import Lesson, Team
-from .settings import settings
+from .settings import Settings
 from .timer import BackgroundTimer
 
 logs = Log()
@@ -27,7 +27,6 @@ class SelectedItems:
         self._unique_teams = dict()  # lesson_id: [team]
 
     def append(self, team: Team) -> bool:
-        logs.write_line("Trying to add team")
         if team.lesson_id in self._unique_teams.keys():
             if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
                 logs.write_line("Team already exists")
@@ -40,12 +39,12 @@ class SelectedItems:
         return True
 
     def delete(self, team: Team) -> True:
-        logs.write_line("Trying to delete team")
         if team.lesson_id in self._unique_teams.keys():
             if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
-                logs.write_line("Delete team")
+                logs.write_line("Team deleted")
                 self._unique_teams[team.lesson_id].remove(team)
                 return True
+        logs.write_line("Error deleting team")
         return False
 
 
@@ -59,10 +58,14 @@ class MenuTree(Tree):
         Binding("ctrl+d", "delete_discipline", "Удалить", show=True),
     ]
 
+    def __init__(self, label, settings: Settings, *args, **kwargs):
+        super().__init__(label, *args, **kwargs)
+        self.settings = settings
+
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
         if node.data and isinstance(node.data, Lesson) and not node.children:
-            cycles = get_cycles(settings.menu_id, lesson_id=node.data.id)
+            cycles = get_cycles(self.settings, node.data.id)
             for cycle in cycles:
                 lesson_node = node.add(label=f"{cycle.name}", data=cycle)
                 for team in cycle.teams:
@@ -84,7 +87,7 @@ class MenuTree(Tree):
             self.electives = self.root.add("Дисциплины")
             electives_list = []
             try:
-                electives_list = get_electives(settings.menu_id)
+                electives_list = get_electives(self.settings)
             except ValueError as e:
                 self.notify(f"Error: {str(e)}")
             except ReadTimeout:
@@ -97,6 +100,7 @@ class MenuTree(Tree):
                 )
                 for lesson in elective.children:
                     elective_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
+            logs.write_line(f"Logged as {self.settings.user}")
 
     def action_set_discipline(self) -> None:
         node = self.cursor_node
@@ -143,7 +147,6 @@ class MenuTree(Tree):
             logs.write_line("Disciplines delete error. IsNotDiscipline")
 
 
-menu = MenuTree("Меню выбора")
 pretty = Pretty(selected_items._unique_teams)
 
 
@@ -155,10 +158,14 @@ class AmogusApp(App):
         Binding("ctrl+v", "push_disciplines", "Записаться", show=True),
     ]
 
+    def __init__(self, settings: Settings, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings = settings
+
     def compose(self) -> ComposeResult:
         with TabbedContent():
             with TabPane("Tree", id="menu-tab"):
-                yield menu
+                yield MenuTree(label="Меню выбора", settings=self.settings)
             with TabPane("Json", id="pretty-tab"):
                 yield pretty
             with TabPane("Logs", id="logs-tab"):
@@ -189,12 +196,12 @@ class AmogusApp(App):
         logs.write_line("Successfully save to file")
 
     def action_push_disciplines(self) -> None:
-        pick_time = settings.pick_time.split(":")
+        pick_time = self.settings.pick_time.split(":")
         BackgroundTimer(
             hour=pick_time[0], minute=pick_time[1], func=self.push_disciplines
         )
-        self.notify(f"Установлен таймер {settings.pick_time}")
-        logs.write_line(f"Timer set {settings.pick_time}")
+        self.notify(f"Установлен таймер {self.settings.pick_time}")
+        logs.write_line(f"Timer set {self.settings.pick_time}")
 
     def push_disciplines(self):
         logs.write_line("Start pushing")
@@ -205,12 +212,13 @@ class AmogusApp(App):
             for team in teams:
                 payload.append(team.id)
             logs.write_line(f"Payload set: {payload}")
-            response = post_lesson(settings.menu_id, payload)
+            response = post_lesson(self.settings, payload)
             response_data = response.json()
             if response.status_code == 200:
                 logs.write_line(
                     f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {payload[0]}.{Style.RESET_ALL}"
                 )
+                self.notify("[УСПЕХ]")
                 if response_data.get("errors"):
                     logs.write_lines(
                         f"{Fore.YELLOW}Но есть предупреждения: {response_data['errors']}{Style.RESET_ALL}"
@@ -219,3 +227,4 @@ class AmogusApp(App):
                 logs.write_line(
                     f"{Fore.RED}[ОШИБКА {response.status_code}] для {payload[0]}: {response_data}{Style.RESET_ALL}"
                 )
+                self.notify("[ОШИБКА]")
