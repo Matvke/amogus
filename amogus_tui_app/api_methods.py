@@ -8,7 +8,7 @@ def get_electives(menu_id: str):
     url = (
         f"https://urfu.modeus.org/learning-path-selection/api/selection/menus/{menu_id}"
     )
-    response = requests.get(url=url, headers=settings.get_headers(), timeout=30)
+    response = requests.get(url=url, headers=settings.get_headers(), timeout=10)
     if response.status_code == 200:
         electives_json = response.json()["electives"]["items"]
         electives = [Elective.model_validate(e) for e in electives_json]

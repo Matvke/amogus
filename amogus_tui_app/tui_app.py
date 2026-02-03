@@ -1,6 +1,7 @@
 import json
 
 from colorama import Fore, Style
+from requests.exceptions import ReadTimeout
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Log, Pretty, TabbedContent, TabPane, Tree
@@ -38,14 +39,6 @@ class MenuTree(Tree):
         Binding("ctrl+s", "set_discipline", "Выбрать", show=True),
     ]
 
-    def __init__(self, label):
-        super().__init__(label)
-        self.electives = self.root.add("Дисциплины")
-        for elective in get_electives(settings.menu_id):
-            elective_node = self.electives.add(label=f"{elective.name}", data=elective)
-            for lesson in elective.children:
-                elective_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
-
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
         if node.data and isinstance(node.data, Lesson) and not node.children:
@@ -66,6 +59,23 @@ class MenuTree(Tree):
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
             logs.write_line(f"Cycles successfully loaded. Lesson id = {node.data.id}")
+        if node.id == 0:
+            self.electives = self.root.add("Дисциплины")
+            electives_list = []
+            try:
+                electives_list = get_electives(settings.menu_id)
+            except ValueError as e:
+                self.notify(f"Error: {str(e)}")
+            except ReadTimeout:
+                self.notify("The website is down")
+            if not electives_list:
+                logs.write_line("Failed to get list of electives")
+            for elective in electives_list:
+                elective_node = self.electives.add(
+                    label=f"{elective.name}", data=elective
+                )
+                for lesson in elective.children:
+                    elective_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
 
     def action_set_discipline(self) -> None:
         node = self.cursor_node
