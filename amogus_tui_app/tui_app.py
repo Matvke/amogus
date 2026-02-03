@@ -1,7 +1,6 @@
-import json
+from typing import Callable
 
 from colorama import Fore, Style
-from requests.exceptions import ReadTimeout
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import (
@@ -13,39 +12,16 @@ from textual.widgets import (
     TabPane,
     Tree,
 )
+from textual.widgets.tree import TreeNode
 
-from .api_methods import get_cycles, get_electives, post_lesson
+from .api_methods import post_lesson
 from .entities import Lesson, Team
+from .selected_items import SelectedItems
 from .settings import Settings
 from .timer import BackgroundTimer
+from .utils import load_cycles, load_electives
 
 logs = Log()
-
-
-class SelectedItems:
-    def __init__(self):
-        self._unique_teams = dict()  # lesson_id: [team]
-
-    def append(self, team: Team) -> bool:
-        if team.lesson_id in self._unique_teams.keys():
-            if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
-                logs.write_line("Team already exists")
-                return False
-            self._unique_teams[team.lesson_id].append(team)
-            logs.write_line(f"Append team to {team.lesson_id}")
-        else:
-            self._unique_teams[team.lesson_id] = [team]
-            logs.write_line(f"Init {team.lesson_id}")
-        return True
-
-    def delete(self, team: Team) -> True:
-        if team.lesson_id in self._unique_teams.keys():
-            if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
-                logs.write_line("Team deleted")
-                self._unique_teams[team.lesson_id].remove(team)
-                return True
-        logs.write_line("Error deleting team")
-        return False
 
 
 selected_items = SelectedItems()
@@ -65,86 +41,58 @@ class MenuTree(Tree):
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         node = message.node
         if node.data and isinstance(node.data, Lesson) and not node.children:
-            cycles = get_cycles(self.settings, node.data.id)
-            for cycle in cycles:
-                lesson_node = node.add(label=f"{cycle.name}", data=cycle)
-                for team in cycle.teams:
-                    new_team = Team(
-                        id=team.id,
-                        name=team.name,
-                        totalSeats=team.totalSeats,
-                        professors=team.professors,
-                        lesson_id=lesson_node.data.id,
-                    )
-                    team_node = lesson_node.add(
-                        label=f"{team.name} {team.id}", data=new_team
-                    )
-                    for professor in team.professors:
-                        team_node.add_leaf(label=professor.name, data=professor)
+            load_cycles(self.settings, node)
             logs.write_line(f"Cycles successfully loaded. Lesson id = {node.data.id}")
 
         elif node.id == 0 and not node.children:
-            self.electives = self.root.add("Дисциплины")
-            electives_list = []
-            try:
-                electives_list = get_electives(self.settings)
-            except ValueError as e:
-                self.notify(f"Error: {str(e)}")
-            except ReadTimeout:
-                self.notify("The website is down")
-            if not electives_list:
-                logs.write_line("Failed to get list of electives")
-            for elective in electives_list:
-                elective_node = self.electives.add(
-                    label=f"{elective.name}", data=elective
-                )
-                for lesson in elective.children:
-                    elective_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
-            logs.write_line(f"Logged as {self.settings.user}")
+            load_electives(self.settings, self.root)
+            logs.write_line(f"Logged in as {self.settings.user}")
+            logs.write_line("Electives successfully loaded.")
 
     def action_set_discipline(self) -> None:
         node = self.cursor_node
-        if node.data and isinstance(node.data, Team):
-            team = Team(
-                id=node.data.id,
-                name=node.data.name,
-                totalSeats=node.data.totalSeats,
-                professors=node.data.professors,
-                lesson_id=node.parent.parent.data.id,
-            )
-            response = selected_items.append(team)
-            if response:
-                self.notify("Выбрано")
-                logs.write_line("Disciplines successfully set")
-                pretty.refresh(layout=True)
-            else:
-                self.notify("Ошибка, уже выбрано", severity="error")
-
-        else:
-            self.notify("Ошибка, не команда", severity="error")
-            logs.write_line("Disciplines set error. IsNotDiscipline")
+        self._process_disciplie(
+            node,
+            selected_items.append,
+            error_msg="Ошибка. Уже существует.",
+            succes_msg="Добавлено",
+        )
 
     def action_delete_discipline(self) -> None:
         node = self.cursor_node
+        self._process_disciplie(
+            node,
+            selected_items.delete,
+            error_msg="Ошибка. Не существует.",
+            succes_msg="Удалено",
+        )
+
+    def _process_disciplie(
+        self, node: TreeNode, action: Callable[[Team], bool], error_msg, succes_msg
+    ):
         if node.data and isinstance(node.data, Team):
-            team = Team(
-                id=node.data.id,
-                name=node.data.name,
-                totalSeats=node.data.totalSeats,
-                professors=node.data.professors,
-                lesson_id=node.parent.parent.data.id,
-            )
-            respone = selected_items.delete(team)
-            if respone:
-                self.notify("Удалено")
-                logs.write_line("Disciplines successfully delete")
+            team = self._create_team_from_node(node)
+            response = action(team)
+            if response:
+                self.notify(succes_msg)
+                logs.write_line(succes_msg)
                 pretty.refresh(layout=True)
             else:
-                self.notify("Ошибка, не существует", severity="error")
+                self.notify(error_msg, severity="error")
+                logs.write_line(error_msg)
 
         else:
             self.notify("Ошибка, не команда", severity="error")
-            logs.write_line("Disciplines delete error. IsNotDiscipline")
+            logs.write_line("Discipline set error. IsNotDiscipline")
+
+    def _create_team_from_node(self, node: TreeNode) -> Team:
+        return Team(
+            id=node.data.id,
+            name=node.data.name,
+            totalSeats=node.data.totalSeats,
+            professors=node.data.professors,
+            lesson_id=node.parent.parent.data.id,
+        )
 
 
 pretty = Pretty(selected_items._unique_teams)
@@ -175,23 +123,13 @@ class AmogusApp(App):
         yield Footer()
 
     def action_load_disciplines(self) -> None:
-        with open("disciplines.json", "r", encoding="utf-8") as file:
-            deseralizable_dict = json.load(file)
-            for lesson_id, teams in deseralizable_dict.items():
-                selected_items._unique_teams[lesson_id] = [
-                    Team.model_validate(team) for team in teams
-                ]
+        selected_items.load_from_file()
         self.notify("Выгружено из disciplines.json")
         logs.write_line("Successfully loaded from file")
         pretty.refresh(layout=True)
 
     def action_save_disciplines(self) -> None:
-        serializable_dict = {}
-        for lesson_id, teams in selected_items._unique_teams.items():
-            serializable_dict[lesson_id] = [team.dict() for team in teams]
-
-        with open("disciplines.json", "w", encoding="utf-8") as file:
-            json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
+        selected_items.save_to_file()
         self.notify("Сохранено в disciplines.json")
         logs.write_line("Successfully save to file")
 
