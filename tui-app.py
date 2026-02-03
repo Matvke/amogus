@@ -2,11 +2,13 @@ import json
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header, Pretty, TabbedContent, TabPane, Tree
+from textual.widgets import Footer, Header, Log, Pretty, TabbedContent, TabPane, Tree
 
 from api_methods import get_cycles, get_electives
 from entities import Lesson, Team
 from settings import settings
+
+logs = Log()
 
 
 class SelectedItems:
@@ -14,16 +16,19 @@ class SelectedItems:
         self._unique_teams = dict()  # lesson_id: [team]
 
     def append(self, team: Team):
+        logs.write("Trying to add team\n")
         if team.lesson_id in self._unique_teams.keys():
             if team.id in list(map(lambda x: x.id, self._unique_teams[team.lesson_id])):
+                logs.write("Team already exists\n")
                 return
             self._unique_teams[team.lesson_id].append(team)
+            logs.write(f"Append team to {team.lesson_id}\n")
         else:
             self._unique_teams[team.lesson_id] = [team]
+            logs.write(f"Init {team.lesson_id}\n")
 
 
 selected_items = SelectedItems()
-pretty = Pretty(selected_items._unique_teams)
 
 
 class MenuTree(Tree):
@@ -59,6 +64,7 @@ class MenuTree(Tree):
                     )
                     for professor in team.professors:
                         team_node.add_leaf(label=professor.name, data=professor)
+            logs.write(f"Cycles successfully loaded. Lesson id = {node.data.id}\n")
 
     def action_set_discipline(self) -> None:
         node = self.cursor_node
@@ -72,12 +78,15 @@ class MenuTree(Tree):
             )
             selected_items.append(team)
             self.notify("Выбрано")
+            logs.write("Disciplines successfully set\n")
             pretty.refresh(layout=True)
         else:
             self.notify("Ошибка", severity="error")
+            logs.write("Disciplines set error. IsNotDiscipline\n")
 
 
 menu = MenuTree("Меню выбора")
+pretty = Pretty(selected_items._unique_teams)
 
 
 class AmogusApp(App):
@@ -93,6 +102,8 @@ class AmogusApp(App):
                 yield menu
             with TabPane("Json", id="pretty-tab"):
                 yield pretty
+            with TabPane("Logs", id="logs-tab"):
+                yield logs
 
         yield Header()
         yield Footer()
@@ -105,6 +116,8 @@ class AmogusApp(App):
                     Team.model_validate(team) for team in teams
                 ]
         self.notify("Выгружено из disciplines.json")
+        logs.write("Succesfully loaded from file\n")
+
         pretty.refresh(layout=True)
 
     def action_save_disciplines(self) -> None:
@@ -115,6 +128,7 @@ class AmogusApp(App):
         with open("disciplines.json", "w", encoding="utf-8") as file:
             json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
         self.notify("Сохранено в disciplines.json")
+        logs.write("Succesfully save to file\n")
 
 
 if __name__ == "__main__":
