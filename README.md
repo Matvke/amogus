@@ -28,6 +28,7 @@ Linux/MacOS
     4. Скопируй значение `id_token` в .env в поле token
 8. Запусти TUI приложение
 `amogus` 
+> Можно явно указывать .env file `amogus --env-file ".env1"`   
 
 ## Структура проекта
 
