@@ -1,3 +1,4 @@
+import time
 from typing import Callable
 
 from colorama import Fore, Style
@@ -156,7 +157,7 @@ class AmogusApp(App):
                 logs.write_line(
                     f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {payload[0]}.{Style.RESET_ALL}"
                 )
-                self.notify("[УСПЕХ]")
+                self.notify("УСПЕХ")
                 if response_data.get("errors"):
                     logs.write_lines(
                         f"{Fore.YELLOW}Но есть предупреждения: {response_data['errors']}{Style.RESET_ALL}"
@@ -165,4 +166,5 @@ class AmogusApp(App):
                 logs.write_line(
                     f"{Fore.RED}[ОШИБКА {response.status_code}] для {payload[0]}: {response_data}{Style.RESET_ALL}"
                 )
-                self.notify("[ОШИБКА]")
+                self.notify("ОШИБКА", severity="error")
+            time.sleep(0.1)
