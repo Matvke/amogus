@@ -1,4 +1,5 @@
 import threading
+import time
 from datetime import datetime
 
 
@@ -15,6 +16,7 @@ class BackgroundTimer:
     def wait_time(self):
         while True:
             now = datetime.now()
-            if now.hour == self.hour and now.minute >= self.minute:
+            if now.hour >= self.hour and now.minute >= self.minute:
                 self.func(*self.args, **self.kwargs)
                 break
+            time.sleep(1)
