@@ -1,4 +1,4 @@
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
 from colorama import Fore, Style
@@ -146,25 +146,59 @@ class AmogusApp(App):
         logs.write_line("Start pushing")
         self.notify("Начинаю записывать")
 
-        for lesson_id, teams in selected_items._unique_teams.items():
+        def push_lesson(lesson_id, teams):
             payload = [lesson_id]
             for team in teams:
                 payload.append(team.id)
-            logs.write_line(f"Payload set: {payload}")
+
+            logs.write_line(f"Payload set for {lesson_id}: {payload}")
             response = post_lesson(self.settings, payload)
             response_data = response.json()
+
             if response.status_code == 200:
                 logs.write_line(
                     f"{Fore.GREEN}[УСПЕХ] Записан на дисциплину {payload[0]}.{Style.RESET_ALL}"
                 )
-                self.notify("УСПЕХ")
                 if response_data.get("errors"):
                     logs.write_lines(
-                        f"{Fore.YELLOW}Но есть предупреждения: {response_data['errors']}{Style.RESET_ALL}"
+                        f"{Fore.YELLOW}Но есть предупреждения для {payload[0]}: {response_data['errors']}{Style.RESET_ALL}"
                     )
+                return True, lesson_id, None
             else:
                 logs.write_line(
                     f"{Fore.RED}[ОШИБКА {response.status_code}] для {payload[0]}: {response_data}{Style.RESET_ALL}"
                 )
-                self.notify("ОШИБКА", severity="error")
-            time.sleep(0.1)
+                return False, lesson_id, response_data
+
+        success_count = 0
+        error_count = 0
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_lesson = {
+                executor.submit(push_lesson, lesson_id, teams): lesson_id
+                for lesson_id, teams in selected_items._unique_teams.items()
+            }
+
+            for future in as_completed(future_to_lesson):
+                lesson_id = future_to_lesson[future]
+                try:
+                    success, lesson_id, error_data = future.result()
+                    if success:
+                        success_count += 1
+                    else:
+                        error_count += 1
+                except Exception as exc:
+                    logs.write_line(
+                        f"{Fore.RED}Задание для {lesson_id} вызвало исключение: {exc}{Style.RESET_ALL}"
+                    )
+                    error_count += 1
+
+        if error_count == 0:
+            self.notify(f"УСПЕХ: все {success_count} дисциплин записаны")
+        else:
+            self.notify(
+                f"Завершено: {success_count} успешно, {error_count} с ошибками",
+                severity="warning" if success_count > 0 else "error",
+            )
+
+        logs.write_line("Все задачи выполнены")
