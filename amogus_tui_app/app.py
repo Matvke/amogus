@@ -16,9 +16,9 @@ from textual.widgets import (
 from textual.widgets.tree import TreeNode
 
 from .api_methods import post_lesson
-from .entities import Lesson, Team
+from .models.entities import Lesson, Team
+from .models.settings import Settings
 from .selected_items import SelectedItems
-from .settings import Settings
 from .timer import BackgroundTimer
 from .utils import load_cycles, load_electives
 

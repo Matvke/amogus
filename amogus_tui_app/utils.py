@@ -1,9 +1,9 @@
 from textual.widgets.tree import TreeNode
 
-from amogus_tui_app.entities import Team
+from amogus_tui_app.models.entities import Team
 
 from .api_methods import get_cycles, get_electives
-from .settings import Settings
+from .models.settings import Settings
 
 
 def load_cycles(settings: Settings, node: TreeNode):

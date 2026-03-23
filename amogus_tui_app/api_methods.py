@@ -1,7 +1,7 @@
 import requests
 
-from .entities import Cycle, Elective
-from .settings import Settings
+from .models.entities import Cycle, Elective
+from .models.settings import Settings
 
 
 def get_electives(settings: Settings):

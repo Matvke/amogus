@@ -1,6 +1,6 @@
 import json
 
-from amogus_tui_app.entities import Team
+from amogus_tui_app.models.entities import Team
 
 
 class SelectedItems:

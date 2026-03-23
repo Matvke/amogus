@@ -20,4 +20,4 @@ dependencies = [
 ]
 
 [project.scripts]
-amogus = "amogus_tui_app:main"
+amogus = "amogus_tui_app.main:main"
