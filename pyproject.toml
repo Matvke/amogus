@@ -19,5 +19,9 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [project.scripts]
-amogus = "amogus_tui_app.main:main"
+amogus = "src.main:main"

@@ -52,7 +52,7 @@ class Lesson(BaseModel):
         return f"\n    {Fore.MAGENTA}Дисциплина: {Style.RESET_ALL}{self.name} {self.id}"
 
 
-class Elective(BaseModel):
+class ModuleGroup(BaseModel):
     id: str
     name: str
     children: list[Lesson]

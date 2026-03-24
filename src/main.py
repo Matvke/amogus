@@ -1,5 +1,9 @@
 import argparse
 
+from src.services.api_client import ApiClient
+from src.services.cycle_service import CycleService
+from src.services.modulegroup_service import ModuleGroupService
+
 from .app import AmogusApp
 from .models.settings import Settings
 
@@ -11,17 +15,15 @@ def main():
     parser.add_argument(
         "--env-file", type=str, default=".env", help="Path to .env file (default: .env)"
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"%(prog)s {__import__('amogus_tui_app').__version__}",
-    )
 
     args = parser.parse_args()
 
     try:
         settings = Settings(_env_file=args.env_file)
-        app = AmogusApp(settings)
+        api_client = ApiClient(settings)
+        cycle_service = CycleService(api_client)
+        module_service = ModuleGroupService(api_client)
+        app = AmogusApp(cycle_service, module_service)
         app.run()
     except Exception as e:
         print(f"Ошибка при запуске: {e}")

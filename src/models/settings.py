@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cycles_endpoint: str = "items/"
     select_endpoint: str = "elements/select/"
 
+    file_name: str = "disciplines.json"
+
     def get_headers(self) -> dict:
         return {
             "accept": "application/json, text/plain, */*",
@@ -30,10 +32,10 @@ class Settings(BaseSettings):
         }
 
     def get_electives_url(self) -> str:
-        return f"{self.base_selection_url}{self.menu_id}/{self.electives_endpoint}"
+        return f"{self.base_selection_url}{self.menu_id}/{self.electives_endpoint}/"
 
     def get_cycles_url(self) -> str:
-        return f"{self.base_selection_url}{self.menu_id}/{self.cycles_endpoint}"
+        return f"{self.base_selection_url}{self.menu_id}/{self.cycles_endpoint}/"
 
     def get_api_menu_url(self) -> str:
-        return f"{self.base_api_url}{self.menu_id}/{self.select_endpoint}"
+        return f"{self.base_api_url}{self.menu_id}/{self.select_endpoint}/"
