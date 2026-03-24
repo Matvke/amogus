@@ -2,7 +2,12 @@ class SelectService:
     def __init__(self):
         self._selected: dict[str, dict[str, dict[str, str]]] = {}
 
+    @property
+    def selected(self):
+        return self._selected
+
     def select_team(self, module_id, lesson_id, cycle_id, team_id):
+        """Выбрать команду"""
         if module_id in self._selected:
             if lesson_id in self._selected[module_id]:
                 if cycle_id in self._selected[module_id][lesson_id]:
@@ -15,6 +20,7 @@ class SelectService:
         )
 
     def deselect_team(self, module_id, lesson_id, cycle_id):
+        """Убрать команду"""
         del self._selected[module_id][lesson_id][cycle_id]
         if not self._selected[module_id][lesson_id]:
             del self._selected[module_id][lesson_id]
@@ -22,9 +28,35 @@ class SelectService:
                 del self._selected[module_id]
 
     def is_selected(self, module_id, lesson_id, cycle_id, team_id):
+        """Выбрана ли команда"""
         if module_id in self._selected:
             if lesson_id in self._selected[module_id]:
                 if cycle_id in self._selected[module_id][lesson_id]:
                     if team_id == self._selected[module_id][lesson_id][cycle_id]:
                         return True
         return False
+
+    def get_teams_for_api(self) -> dict[str, list[str]]:
+        """Вернуть команды в формате для API"""
+        selected: dict[str, list[str]] = {}
+        for module_id in self._selected:
+            for lesson_id in self._selected[module_id]:
+                teams_list = []
+                for cycle_id in self._selected[module_id][lesson_id]:
+                    for team in self._selected[module_id][lesson_id][cycle_id]:
+                        teams_list.append[team]
+            selected[lesson_id] = teams_list
+        return selected
+
+    def get_selected_teams(self) -> set:
+        """Вернуть множество id активных команд"""
+        teams = set()
+        for module_id in self._selected:
+            for lesson_id in self._selected[module_id]:
+                for cycle_id in self._selected[module_id][lesson_id]:
+                    team = self._selected[module_id][lesson_id][cycle_id]
+                    teams.add(team)
+        return teams
+
+    def load_selected(self, selected: dict):
+        self._selected = selected

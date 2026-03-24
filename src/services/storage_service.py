@@ -1,6 +1,5 @@
 import json
 
-from src.models.entities import Team
 from src.models.settings import Settings
 
 
@@ -9,18 +8,10 @@ class StorageService:
         self.settings = settings
         self.file_name = settings.file_name if file_name is None else file_name
 
-    def load_from_file(self):
+    def load_from_file(self) -> dict:
         with open(self.file_name, "r", encoding="utf-8") as file:
-            deseralizable_dict = json.load(file)
-            for lesson_id, teams in deseralizable_dict.items():
-                self._unique_teams[lesson_id] = [
-                    Team.model_validate(team) for team in teams
-                ]
+            return json.load(file)
 
-    def save_to_file(self):
-        serializable_dict = {}
-        for lesson_id, teams in self._unique_teams.items():
-            serializable_dict[lesson_id] = [team.dict() for team in teams]
-
+    def save_to_file(self, selection: dict):
         with open(self.file_name, "w", encoding="utf-8") as file:
-            json.dump(serializable_dict, file, ensure_ascii=False, indent=4)
+            json.dump(selection, file, ensure_ascii=False, indent=4)

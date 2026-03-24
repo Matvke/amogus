@@ -8,7 +8,6 @@ from src.models.entities import Cycle, Lesson, ModuleGroup, Team
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
 from src.services.select_service import SelectService
-from src.services.storage_service import StorageService
 
 
 class MenuTree(Tree):
@@ -23,7 +22,6 @@ class MenuTree(Tree):
         cycle_service: CycleService,
         module_service: ModuleGroupService,
         select_service: SelectService,
-        storage_service: StorageService,
         *args,
         **kwargs,
     ):
@@ -31,7 +29,7 @@ class MenuTree(Tree):
         self.cycle_service = cycle_service
         self.module_service = module_service
         self.select_service = select_service
-        self.storage_service = storage_service
+        self._team_nodes: dict[str, TreeNode] = {}
 
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         """Отрисовка листьев дерева при разворачивании"""
@@ -54,10 +52,18 @@ class MenuTree(Tree):
 
     def _add_cycles(self, node: TreeNode, cycles: list[Cycle]):
         """Отрисовка курсов"""
+        module_id = node.parent.data.id
+        lesson_id = node.data.id
         for cycle in cycles:
             cycle_node = node.add(label=cycle.name, data=cycle)
             for team in cycle.teams:
-                team_node = cycle_node.add(label=team.name, data=team)
+                is_selected = self.select_service.is_selected(
+                    module_id, lesson_id, cycle.id, team.id
+                )
+                label = f"[green]{team.name}[/green]" if is_selected else f"{team.name}"
+                team_node = cycle_node.add(label=label, data=team)
+                self._team_nodes[team.id] = team_node
+
                 for prof in team.professors:
                     team_node.add_leaf(label=prof.name, data=prof)
 
@@ -122,3 +128,11 @@ class MenuTree(Tree):
             result.append(curr_node.data.id)
             curr_node = curr_node.parent
         return result[::-1]
+
+    def refresh_selection(self):
+        teams_ids = self.select_service.get_selected_teams()
+        for team_id in self._team_nodes:
+            if team_id in teams_ids:
+                self._mark_selected(self._team_nodes[team_id], True)
+            else:
+                self._mark_selected(self._team_nodes[team_id], False)

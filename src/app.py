@@ -19,9 +19,9 @@ class AmogusApp(App):
 
     BINDINGS = [
         *App.BINDINGS,
-        Binding("ctrl+x", "save_disciplines", "Сохранить команды", show=True),
-        Binding("ctrl+z", "load_disciplines", "Загрузить команды", show=True),
-        Binding("ctrl+v", "push_disciplines", "Записаться", show=True),
+        Binding("ctrl+x", "save", "Сохранить команды", show=True),
+        Binding("ctrl+z", "load", "Загрузить команды", show=True),
+        Binding("ctrl+v", "push", "Записаться", show=True),
     ]
 
     def __init__(
@@ -47,8 +47,24 @@ class AmogusApp(App):
                     cycle_service=self.cycle_service,
                     module_service=self.module_service,
                     select_service=self.select_service,
-                    storage_service=self.storage_service,
                 )
 
         yield Header()
         yield Footer()
+
+    def action_save(self):
+        try:
+            self.storage_service.save_to_file(self.select_service.selected)
+            self.notify("Выбор сохранен")
+        except Exception as e:
+            self.notify(str(e), severity="error")
+
+    def action_load(self):
+        try:
+            selected = self.storage_service.load_from_file()
+            self.select_service.load_selected(selected)
+            tree: MenuTree = self.query_one(MenuTree)
+            tree.refresh_selection()
+            self.notify("Выбор загружен")
+        except FileNotFoundError as e:
+            self.notify(str(e), severity="error")
