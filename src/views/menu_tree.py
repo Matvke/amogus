@@ -51,7 +51,7 @@ class MenuTree(Tree):
                 self.notify(str(e), severity="error")
 
     def _add_cycles(self, node: TreeNode, cycles: list[Cycle]):
-        """Отрисовка курсов"""
+        """Отрисовка курсов и команд"""
         module_id = node.parent.data.id
         lesson_id = node.data.id
         for cycle in cycles:
@@ -130,6 +130,7 @@ class MenuTree(Tree):
         return result[::-1]
 
     def refresh_selection(self):
+        """Обновление подгруженных команд"""
         teams_ids = self.select_service.get_selected_teams()
         for team_id in self._team_nodes:
             if team_id in teams_ids:

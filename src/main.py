@@ -3,6 +3,7 @@ import argparse
 from src.services.api_client import ApiClient
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
+from src.services.push_service import PushService
 from src.services.select_service import SelectService
 from src.services.storage_service import StorageService
 
@@ -27,7 +28,14 @@ def main():
         module_service = ModuleGroupService(api_client)
         select_service = SelectService()
         storage_service = StorageService(settings)
-        app = AmogusApp(cycle_service, module_service, select_service, storage_service)
+        push_service = PushService(api_client)
+        app = AmogusApp(
+            cycle_service,
+            module_service,
+            select_service,
+            storage_service,
+            push_service,
+        )
         app.run()
     except Exception as e:
         print(f"Ошибка при запуске: {e}")

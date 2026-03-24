@@ -43,8 +43,8 @@ class SelectService:
             for lesson_id in self._selected[module_id]:
                 teams_list = []
                 for cycle_id in self._selected[module_id][lesson_id]:
-                    for team in self._selected[module_id][lesson_id][cycle_id]:
-                        teams_list.append[team]
+                    team = self._selected[module_id][lesson_id][cycle_id]
+                    teams_list.append(team)
             selected[lesson_id] = teams_list
         return selected
 

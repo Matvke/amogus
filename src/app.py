@@ -9,6 +9,7 @@ from textual.widgets import (
 
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
+from src.services.push_service import PushService
 from src.services.select_service import SelectService
 from src.services.storage_service import StorageService
 from src.views.menu_tree import MenuTree
@@ -30,6 +31,7 @@ class AmogusApp(App):
         module_service: ModuleGroupService,
         select_service: SelectService,
         storage_service: StorageService,
+        push_service: PushService,
         *args,
         **kwargs,
     ):
@@ -38,6 +40,9 @@ class AmogusApp(App):
         self.module_service = module_service
         self.select_service = select_service
         self.storage_service = storage_service
+        self.push_service = push_service
+        self._pushing = False
+        self.push_service.on_progress = self._on_push_progress
 
     def compose(self) -> ComposeResult:
         with TabbedContent():
@@ -68,3 +73,24 @@ class AmogusApp(App):
             self.notify("Выбор загружен")
         except FileNotFoundError as e:
             self.notify(str(e), severity="error")
+
+    async def action_push(self):
+        if self._pushing:
+            self.notify("Запись уже выполняется", severity="warning")
+            return
+        self._pushing = True
+        try:
+            selection = self.select_service.get_teams_for_api()
+            await self.push_service.push_all(selection)
+        except Exception as e:
+            self.notify(str(e), severity="error")
+        finally:
+            self._pushing = False
+
+    def _on_push_progress(self, current: int, total: int, error: str = None):
+        if error:
+            self.notify(f"Ошибка: {error}")
+        else:
+            self.notify(f"Прогресс: {current}/{total}")
+        if current == total:
+            self.notify("Запись завершена")
