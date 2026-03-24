@@ -1,10 +1,10 @@
 import json
 
-from models.entities import Team
-from models.settings import Settings
+from src.models.entities import Team
+from src.models.settings import Settings
 
 
-class Storage:
+class StorageService:
     def __init__(self, settings: Settings, file_name: str | None = None):
         self.settings = settings
         self.file_name = settings.file_name if file_name is None else file_name

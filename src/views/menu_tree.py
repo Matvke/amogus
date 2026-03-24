@@ -4,16 +4,17 @@ from textual.widgets import (
 )
 from textual.widgets.tree import TreeNode
 
-from src.models.entities import Cycle, Lesson, ModuleGroup
+from src.models.entities import Cycle, Lesson, ModuleGroup, Team
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
+from src.services.select_service import SelectService
+from src.services.storage_service import StorageService
 
 
 class MenuTree(Tree):
     BINDINGS = [
         *Tree.BINDINGS,
-        Binding("ctrl+s", "set_discipline", "Выбрать", show=True),
-        Binding("ctrl+d", "delete_discipline", "Удалить", show=True),
+        Binding("ctrl+s", "select", "Выбрать", show=True),
     ]
 
     def __init__(
@@ -21,17 +22,21 @@ class MenuTree(Tree):
         label,
         cycle_service: CycleService,
         module_service: ModuleGroupService,
+        select_service: SelectService,
+        storage_service: StorageService,
         *args,
         **kwargs,
     ):
         super().__init__(label, *args, **kwargs)
         self.cycle_service = cycle_service
         self.module_service = module_service
+        self.select_service = select_service
+        self.storage_service = storage_service
 
     def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         """Отрисовка листьев дерева при разворачивании"""
         node = message.node
-        if node is self.root:
+        if node is self.root and not node.children:
             try:
                 modules = self.module_service.get_modules()
                 self._add_modules(node, modules)
@@ -52,14 +57,68 @@ class MenuTree(Tree):
         for cycle in cycles:
             cycle_node = node.add(label=cycle.name, data=cycle)
             for team in cycle.teams:
-                team_node = cycle_node.add(label=f"{team.name} {team.id}", data=team)
+                team_node = cycle_node.add(label=team.name, data=team)
                 for prof in team.professors:
                     team_node.add_leaf(label=prof.name, data=prof)
 
     def _add_modules(self, node: TreeNode, modules: list[ModuleGroup]):
         """Отрисовка модулей"""
-        elective_node = node.add("Дисциплины")
         for module in modules:
-            module_node = elective_node.add(label=module.name, data=module)
+            module_node = node.add(label=module.name, data=module)
             for lesson in module.children:
-                module_node.add(label=f"{lesson.name} {lesson.id}", data=lesson)
+                module_node.add(label=lesson.name, data=lesson)
+
+    def action_select(self) -> None:
+        """Выбрать команду"""
+        node = self.cursor_node
+        if node.data and isinstance(node.data, Team):
+            try:
+                module_id, lesson_id, cycle_id, team_id = self._get_parent_ids(node)
+                if self.select_service.is_selected(
+                    module_id, lesson_id, cycle_id, team_id
+                ):
+                    self._deselect_team(node, module_id, lesson_id, cycle_id)
+                    self.notify("Успешно удалено")
+                else:
+                    self._select_team(node, module_id, lesson_id, cycle_id, team_id)
+                    self.notify("Успешно добавлено")
+
+            except ValueError as e:
+                self.notify(str(e), severity="error")
+        else:
+            self.notify("Нужно выбирать команды", severity="warning")
+
+    def _select_team(self, node, module_id, lesson_id, cycle_id, team_id):
+        """Выбрать команду"""
+        self.select_service.select_team(
+            module_id,
+            lesson_id,
+            cycle_id,
+            team_id,
+        )
+        self._mark_selected(node, True)
+
+    def _deselect_team(self, node, module_id, lesson_id, cycle_id):
+        """Удалить команду из выбранных"""
+        self.select_service.deselect_team(
+            module_id,
+            lesson_id,
+            cycle_id,
+        )
+        self._mark_selected(node, select=False)
+
+    def _mark_selected(self, node: TreeNode, select: bool):
+        """Покрасить в зеленый"""
+        if select:
+            node.label = f"[green]{node.label}[/green]"
+        else:
+            node.label = str(node.label).replace("[green]", "").replace("[/green]", "")
+
+    def _get_parent_ids(self, node: TreeNode, depth: int = 3):
+        """Получить ids родителей ноды выше на depth"""
+        result = []
+        curr_node = node
+        for _ in range(depth + 1):
+            result.append(curr_node.data.id)
+            curr_node = curr_node.parent
+        return result[::-1]
