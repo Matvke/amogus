@@ -1,6 +1,5 @@
 import requests
 
-from src.models.entities import Cycle, ModuleGroup
 from src.models.settings import Settings
 
 
@@ -16,8 +15,7 @@ class ApiClient:
         if response.status_code == 200:
             self.settings.user = response.json()["student"]["fullName"]
             electives_json = response.json()["electives"]["items"]
-            electives = [ModuleGroup.model_validate(e) for e in electives_json]
-            return electives
+            return electives_json
         elif response.status_code == 404:
             raise ValueError("Некорректный menu_id")
         elif response.status_code == 401:
@@ -30,8 +28,7 @@ class ApiClient:
         url = f"{self.settings.get_cycles_url()}{lesson_id}"
         response = requests.get(url=url, headers=self.settings.get_headers())
         cycles_json = response.json()["cycles"]
-        cycles = [Cycle.model_validate(c) for c in cycles_json]
-        return cycles
+        return cycles_json
 
     def post_selection(self, payload: list = None) -> requests.Response:
         url = self.settings.get_api_menu_url()

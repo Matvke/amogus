@@ -10,5 +10,6 @@ class ModuleGroupService:
 
     def get_modules(self) -> list[ModuleGroup]:
         if self._modules is None:
-            self._modules = self.api_client.get_modules()
+            electives_json = self.api_client.get_modules()
+            self._modules = [ModuleGroup.model_validate(e) for e in electives_json]
         return self._modules
