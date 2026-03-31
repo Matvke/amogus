@@ -10,9 +10,8 @@ class AsyncApiClient:
 
     async def get_modules(self):
         url = self.settings.get_electives_url()
-        response = await self.client.get(
-            url=url, headers=self.settings.get_headers(), timeout=10
-        )
+        response = await self.client.get(url=url)
+        response.raise_for_status()
         if response.status_code == 200:
             electives_json = response.json()["electives"]["items"]
             return electives_json
@@ -23,13 +22,11 @@ class AsyncApiClient:
 
     async def get_cycles(self, lesson_id: str):
         url = f"{self.settings.get_cycles_url()}{lesson_id}"
-        response = await self.client.get(url=url, headers=self.settings.get_headers())
+        response = await self.client.get(url=url)
         cycles_json = response.json()["cycles"]
         return cycles_json
 
     async def post_selection(self, payload: list):
         url = self.settings.get_api_menu_url()
-        response = await self.client.post(
-            url=url, headers=self.settings.get_headers(), json=payload
-        )
+        response = await self.client.post(url=url, json=payload)
         return response

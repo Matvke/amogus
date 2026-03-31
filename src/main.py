@@ -14,6 +14,15 @@ from .app import AmogusApp
 from .models.settings import Settings
 
 
+class BearerAuth(httpx.Auth):
+    def __init__(self, token: str) -> None:
+        self.token = token
+
+    def auth_flow(self, request: httpx.Request):
+        request.headers["authorization"] = f"Bearer {self.token}"
+        yield request
+
+
 async def async_main():
     parser = argparse.ArgumentParser(
         description="Amogus TUI App - запись на элективы УрФУ"
@@ -25,7 +34,9 @@ async def async_main():
     args = parser.parse_args()
 
     settings = Settings(_env_file=args.env_file)
-    async with httpx.AsyncClient(timeout=10) as http_client:
+    auth = BearerAuth(settings.token)
+
+    async with httpx.AsyncClient(timeout=10, auth=auth) as http_client:
         api_client = AsyncApiClient(settings, http_client)
         cycle_service = CycleService(api_client)
         module_service = ModuleGroupService(api_client)
