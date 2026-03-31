@@ -112,6 +112,8 @@ class AmogusApp(App):
     async def action_set_timer(self):
         """Установить таймер на время, указанное в settings.pick_time."""
         # TODO Запретить запуск таймера, если нет выбранных предметов.
+        # TODO Таймер не останавливается после завершения и не удаляется.
+        # TODO Таймер невозможно остановить.
         if self._timer is None:
             self._timer = Timer(
                 pick_time=self.settings.pick_time, on_complete=self.action_push
@@ -123,4 +125,5 @@ class AmogusApp(App):
             timer_widget = self.query_one("#timer", Static)
             timer_widget.update(f"Таймер: {self.settings.pick_time}")
         else:
-            self.notify("Таймер уже запущен")
+            self.notify("Останавливаю таймер")
+            self._timer.stop_timer()

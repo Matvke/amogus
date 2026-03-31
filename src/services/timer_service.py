@@ -17,6 +17,10 @@ class Timer:
         wait_seconds = (self.pick_time - now).total_seconds()
         self._timer_task = asyncio.create_task(self._wait(wait_seconds))
 
+    async def stop_timer(self):
+        if self._timer_task and not self._timer_task.done():
+            self._timer_task.cancel()
+
     async def _wait(self, seconds: float):
         """Ждать и вызвать функцию"""
         try:
