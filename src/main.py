@@ -1,6 +1,9 @@
 import argparse
+import asyncio
 
-from src.services.api_client import ApiClient
+import httpx
+
+from src.services.async_client import AsyncApiClient
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
 from src.services.push_service import PushService
@@ -11,7 +14,7 @@ from .app import AmogusApp
 from .models.settings import Settings
 
 
-def main():
+async def async_main():
     parser = argparse.ArgumentParser(
         description="Amogus TUI App - запись на элективы УрФУ"
     )
@@ -21,14 +24,15 @@ def main():
 
     args = parser.parse_args()
 
-    try:
-        settings = Settings(_env_file=args.env_file)
-        api_client = ApiClient(settings)
+    settings = Settings(_env_file=args.env_file)
+    async with httpx.AsyncClient(timeout=10) as http_client:
+        api_client = AsyncApiClient(settings, http_client)
         cycle_service = CycleService(api_client)
         module_service = ModuleGroupService(api_client)
+        push_service = PushService(api_client)
         select_service = SelectService()
         storage_service = StorageService(settings)
-        push_service = PushService(api_client)
+
         app = AmogusApp(
             cycle_service,
             module_service,
@@ -36,13 +40,12 @@ def main():
             storage_service,
             push_service,
         )
-        app.run()
-    except Exception as e:
-        print(f"Ошибка при запуске: {e}")
-        return 1
+        await app.run_async()
 
-    return 0
+
+def main():
+    return asyncio.run(async_main())
 
 
 if __name__ == "__main__":
-    exit(main())
+    asyncio.run(main())
