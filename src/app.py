@@ -27,7 +27,7 @@ class AmogusApp(App):
         Binding("ctrl+x", "save", "Сохранить команды", show=True),
         Binding("ctrl+z", "load", "Загрузить команды", show=True),
         Binding("ctrl+v", "push", "Записаться", show=True),
-        Binding("ctrl+t", "set_timer", "Записаться", show=True),
+        Binding("ctrl+t", "set_timer", "Поставить таймер", show=True),
     ]
 
     def __init__(
