@@ -13,7 +13,6 @@ class ApiClient:
             url=url, headers=self.settings.get_headers(), timeout=10
         )
         if response.status_code == 200:
-            self.settings.user = response.json()["student"]["fullName"]
             electives_json = response.json()["electives"]["items"]
             return electives_json
         elif response.status_code == 404:

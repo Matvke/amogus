@@ -5,7 +5,6 @@ class Settings(BaseSettings):
     token: str
     menu_id: str
     pick_time: str
-    user: None | str = None
     base_selection_url: str = (
         "https://urfu.modeus.org/learning-path-selection/api/selection/menus/"
     )
