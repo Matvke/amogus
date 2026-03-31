@@ -50,6 +50,7 @@ async def async_main():
             select_service,
             storage_service,
             push_service,
+            settings,
         )
         await app.run_async()
 

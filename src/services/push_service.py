@@ -1,52 +1,53 @@
 import asyncio
+from dataclasses import dataclass
 from typing import Callable, Optional
 
-from src.services.api_client import ApiClient
+from src.exceptions.api_exc import ApiError
+from src.services.async_client import AsyncApiClient
+
+
+@dataclass
+class PushResult:
+    lesson_id: str
+    success: bool
+    error: str | None = None
+    text: str | None = None
 
 
 class PushService:
     def __init__(
         self,
-        api_client: ApiClient,
-        on_progress: Optional[Callable[[str, int, int], None]] = None,
+        api_client: AsyncApiClient,
+        on_progress: Optional[Callable[[PushResult, int, int], None]] = None,
     ):
         self.api_client = api_client
         self.on_progress = on_progress
 
-    async def push_all(self, selection: dict):
-        """Отправить все выбранные предметы"""
+    async def push_all(self, selection: dict[str, list[str]]) -> list[PushResult]:
         total = len(selection)
         completed = 0
-        errors = 0
-        tasks = []
-        for lesson_id, team_ids in selection.items():
-            payload = [lesson_id] + team_ids
-            tasks.append(asyncio.create_task(self._push_one(payload)))
-        for coro in asyncio.as_completed(tasks):
-            success, error = await coro
+        results = []
+        tasks = [
+            self._push_one(lesson_id, self.build_payload(lesson_id, teams_ids))
+            for lesson_id, teams_ids in selection.items()
+        ]
+        for task in asyncio.as_completed(tasks):
+            result = await task
             completed += 1
-            if not success:
-                errors += 1
-                if self.on_progress:
-                    self.on_progress(completed, total, error=error)
-            else:
-                if self.on_progress:
-                    self.on_progress(completed, total)
-        if self.on_progress:
-            if errors == 0:
-                self.on_progress(total, total, error=None)
-            else:
-                self.on_progress(total, total, error=f"Завершено с {errors} ошибками")
+            results.append(result)
+            if self.on_progress:
+                self.on_progress(result, completed, total)
+        return results
 
-    async def _push_one(self, payload):
-        loop = asyncio.get_running_loop()
+    async def _push_one(self, lesson_id: str, payload: list[str]) -> PushResult:
         try:
-            response = await loop.run_in_executor(
-                None, self.api_client.post_selection, payload
+            response = await self.api_client.post_selection(payload)
+            return PushResult(lesson_id=lesson_id, success=True, text=response)
+        except ApiError as e:
+            return PushResult(
+                lesson_id=lesson_id, success=False, error=str(e), text=None
             )
-            if response.ok:
-                return True, None
-            else:
-                return False, f"Ошибка {response.status_code}: {response.text}"
-        except Exception as e:
-            return False, str(e)
+
+    @staticmethod
+    def build_payload(lesson_id: str, teams_ids: list[str]) -> list[str]:
+        return [lesson_id, *teams_ids]

@@ -7,11 +7,13 @@ from textual.widgets import (
     TabPane,
 )
 
+from src.models.settings import Settings
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
-from src.services.push_service import PushService
+from src.services.push_service import PushResult, PushService
 from src.services.select_service import SelectService
 from src.services.storage_service import StorageService
+from src.services.timer_service import Timer
 from src.views.menu_tree import MenuTree
 
 
@@ -23,6 +25,7 @@ class AmogusApp(App):
         Binding("ctrl+x", "save", "Сохранить команды", show=True),
         Binding("ctrl+z", "load", "Загрузить команды", show=True),
         Binding("ctrl+v", "push", "Записаться", show=True),
+        Binding("ctrl+t", "set_timer", "Записаться", show=True),
     ]
 
     def __init__(
@@ -32,6 +35,7 @@ class AmogusApp(App):
         select_service: SelectService,
         storage_service: StorageService,
         push_service: PushService,
+        settings: Settings,
         *args,
         **kwargs,
     ):
@@ -42,7 +46,9 @@ class AmogusApp(App):
         self.storage_service = storage_service
         self.push_service = push_service
         self._pushing = False
+        self.settings = settings
         self.push_service.on_progress = self._on_push_progress
+        self._timer = None
 
     def compose(self) -> ComposeResult:
         with TabbedContent():
@@ -67,7 +73,7 @@ class AmogusApp(App):
     def action_load(self):
         try:
             selected = self.storage_service.load_from_file()
-            self.select_service.load_selected(selected)
+            self.select_service.selected = selected
             tree: MenuTree = self.query_one(MenuTree)
             tree.refresh_selection()
             self.notify("Выбор загружен")
@@ -87,10 +93,23 @@ class AmogusApp(App):
         finally:
             self._pushing = False
 
-    def _on_push_progress(self, current: int, total: int, error: str = None):
-        if error:
-            self.notify(f"Ошибка: {error}")
+    def _on_push_progress(self, result: PushResult, completed: int, total: int):
+        if result.error is not None:
+            self.notify(f"Ошибка: {result.error}", severity="error")
         else:
-            self.notify(f"Прогресс: {current}/{total}")
-        if current == total:
+            self.notify(f"Прогресс: {completed}/{total}")
+        if completed == total:
             self.notify("Запись завершена")
+
+    async def action_set_timer(self):
+        """Установить таймер на время, указанное в settings.pick_time."""
+        if self._timer is None:
+            self._timer = Timer(
+                pick_time=self.settings.pick_time, on_complete=self.action_push
+            )
+            await self._timer.set_timer()
+            self.notify(
+                f"Запуск таймера на {self.settings.pick_time}", severity="warning"
+            )
+        else:
+            self.notify("Таймер уже запущен")

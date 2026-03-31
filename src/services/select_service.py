@@ -1,10 +1,15 @@
 class SelectService:
+    # TODO use the pipline
     def __init__(self):
         self._selected: dict[str, dict[str, dict[str, str]]] = {}
 
     @property
     def selected(self):
         return self._selected
+
+    @selected.setter
+    def selected(self, value):
+        self._selected = value
 
     def select_team(self, module_id, lesson_id, cycle_id, team_id):
         """Выбрать команду"""
@@ -57,6 +62,3 @@ class SelectService:
                     team = self._selected[module_id][lesson_id][cycle_id]
                     teams.add(team)
         return teams
-
-    def load_selected(self, selected: dict):
-        self._selected = selected
