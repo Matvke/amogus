@@ -31,19 +31,19 @@ class MenuTree(Tree):
         self.select_service = select_service
         self._team_nodes: dict[str, TreeNode] = {}
 
-    def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
+    async def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         """Отрисовка листьев дерева при разворачивании"""
         node = message.node
         if node is self.root and not node.children:
             try:
-                modules = self.module_service.get_modules()
+                modules = await self.module_service.get_modules()
                 self._add_modules(node, modules)
             except ValueError as e:
                 self.notify(str(e), severity="error")
 
         elif node.data and isinstance(node.data, Lesson) and not node.children:
             try:
-                cycles = self.cycle_service.get_cycles(node.data.id)
+                cycles = await self.cycle_service.get_cycles(node.data.id)
                 self._add_cycles(node, cycles)
             except ValueError as e:
                 with open("logs.txt", "w") as f:
