@@ -1,3 +1,4 @@
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import (
@@ -90,6 +91,13 @@ class AmogusApp(App):
             self.notify(str(e), severity="error")
 
     async def action_push(self):
+        self._push_disciplines()
+
+    @work(exclusive=True)
+    async def _push_disciplines(self):
+        if not self.select_service.get_teams_for_api():
+            self.notify("Нет выбранных предметов", severity="warning")
+            return
         if self._pushing:
             self.notify("Запись уже выполняется", severity="warning")
             return
@@ -111,9 +119,13 @@ class AmogusApp(App):
 
     async def action_set_timer(self):
         """Установить таймер на время, указанное в settings.pick_time."""
-        # TODO Запретить запуск таймера, если нет выбранных предметов.
         # TODO Таймер не останавливается после завершения и не удаляется.
         # TODO Таймер невозможно остановить.
+        if not self.select_service.get_teams_for_api():
+            self.notify("Нет выбранных предметов", severity="warning")
+            return
+
+        timer_widget = self.query_one("#timer", Static)
         if self._timer is None:
             self._timer = Timer(
                 pick_time=self.settings.pick_time, on_complete=self.action_push
@@ -122,8 +134,10 @@ class AmogusApp(App):
             self.notify(
                 f"Запуск таймера на {self.settings.pick_time}", severity="warning"
             )
-            timer_widget = self.query_one("#timer", Static)
             timer_widget.update(f"Таймер: {self.settings.pick_time}")
         else:
             self.notify("Останавливаю таймер")
-            self._timer.stop_timer()
+            if hasattr(self._timer, "stop_timer"):
+                self._timer.stop_timer()
+            self._timer = None
+            timer_widget.update("Таймер: --:--:--")
