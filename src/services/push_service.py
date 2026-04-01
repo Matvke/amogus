@@ -1,9 +1,12 @@
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Callable, Optional
 
 from src.clients.async_client import AsyncApiClient
-from src.exceptions.api_exc import ApiError
+from src.exceptions.custom import CustomExc
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -24,6 +27,7 @@ class PushService:
         self.on_progress = on_progress
 
     async def push_all(self, selection: dict[str, list[str]]) -> list[PushResult]:
+        logger.debug("Start pushing: count=%s, selection=%s", len(selection), selection)
         total = len(selection)
         completed = 0
         results = []
@@ -42,8 +46,17 @@ class PushService:
     async def _push_one(self, lesson_id: str, payload: list[str]) -> PushResult:
         try:
             response = await self.api_client.post_selection(payload)
+            logger.debug(
+                "Push one succesful: lesson_id=%s, payload=%s", lesson_id, payload
+            )
             return PushResult(lesson_id=lesson_id, success=True, text=response)
-        except ApiError as e:
+        except CustomExc as e:
+            logger.debug(
+                "Push one error: lesson_id=%s, payload=%s, error=%s",
+                lesson_id,
+                payload,
+                str(e),
+            )
             return PushResult(
                 lesson_id=lesson_id, success=False, error=str(e), text=None
             )

@@ -1,6 +1,6 @@
 from httpx import AsyncClient, HTTPStatusError
 
-from src.exceptions.api_exc import (
+from src.exceptions.custom import (
     IncorrectMenuId,
     IncorrectSchedule,
     IncorrectToken,

@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 
 import httpx
 
@@ -12,6 +13,12 @@ from src.services.storage_service import StorageService
 
 from .app import AmogusApp
 from .models.settings import Settings
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.FileHandler("amogus.log")],
+)
 
 
 class BearerAuth(httpx.Auth):
@@ -35,7 +42,6 @@ async def async_main():
 
     settings = Settings(_env_file=args.env_file)
     auth = BearerAuth(settings.token)
-
     async with httpx.AsyncClient(timeout=10, auth=auth) as http_client:
         api_client = AsyncApiClient(settings, http_client)
         cycle_service = CycleService(api_client)

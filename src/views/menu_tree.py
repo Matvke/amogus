@@ -106,11 +106,7 @@ class MenuTree(Tree):
 
     def _deselect_team(self, node, module_id, lesson_id, cycle_id):
         """Удалить команду из выбранных"""
-        self.select_service.deselect_team(
-            module_id,
-            lesson_id,
-            cycle_id,
-        )
+        self.select_service.deselect_team(module_id, lesson_id, cycle_id)
         self._mark_selected(node, select=False)
 
     def _mark_selected(self, node: TreeNode, select: bool):
