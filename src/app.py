@@ -119,8 +119,6 @@ class AmogusApp(App):
 
     async def action_set_timer(self):
         """Установить таймер на время, указанное в settings.pick_time."""
-        # TODO Таймер не останавливается после завершения и не удаляется.
-        # TODO Таймер невозможно остановить.
         if not self.select_service.get_teams_for_api():
             self.notify("Нет выбранных предметов", severity="warning")
             return
@@ -137,7 +135,6 @@ class AmogusApp(App):
             timer_widget.update(f"Таймер: {self.settings.pick_time}")
         else:
             self.notify("Останавливаю таймер")
-            if hasattr(self._timer, "stop_timer"):
-                self._timer.stop_timer()
+            await self._timer.stop_timer()
             self._timer = None
             timer_widget.update("Таймер: --:--:--")

@@ -2,8 +2,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from src.clients.async_client import AsyncApiClient
 from src.exceptions.api_exc import ApiError
-from src.services.async_client import AsyncApiClient
 
 
 @dataclass

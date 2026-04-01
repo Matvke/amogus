@@ -3,7 +3,7 @@ import asyncio
 
 import httpx
 
-from src.services.async_client import AsyncApiClient
+from src.clients.async_client import AsyncApiClient
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
 from src.services.push_service import PushService

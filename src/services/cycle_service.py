@@ -1,10 +1,9 @@
+from src.clients.async_client import AsyncApiClient
 from src.models.entities import Cycle
-
-from .api_client import ApiClient
 
 
 class CycleService:
-    def __init__(self, api_client: ApiClient):
+    def __init__(self, api_client: AsyncApiClient):
         self.api_client = api_client
         self._cycles: dict[str, list[Cycle]] = {}
 

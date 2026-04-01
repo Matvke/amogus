@@ -1,5 +1,4 @@
 class SelectService:
-    # TODO use the pipline
     def __init__(self):
         self._selected: dict[str, dict[str, dict[str, str]]] = {}
 
