@@ -1,3 +1,4 @@
+from textual import work
 from textual.binding import Binding
 from textual.widgets import (
     Tree,
@@ -31,6 +32,7 @@ class MenuTree(Tree):
         self.select_service = select_service
         self._team_nodes: dict[str, TreeNode] = {}
 
+    @work(exclusive=True)
     async def on_tree_node_expanded(self, message: Tree.NodeExpanded) -> None:
         """Отрисовка листьев дерева при разворачивании"""
         node = message.node
@@ -46,8 +48,6 @@ class MenuTree(Tree):
                 cycles = await self.cycle_service.get_cycles(node.data.id)
                 self._add_cycles(node, cycles)
             except ValueError as e:
-                with open("logs.txt", "w") as f:
-                    f.write(str(e))
                 self.notify(str(e), severity="error")
 
     def _add_cycles(self, node: TreeNode, cycles: list[Cycle]):
