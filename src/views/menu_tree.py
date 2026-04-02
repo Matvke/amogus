@@ -5,6 +5,7 @@ from textual.widgets import (
 )
 from textual.widgets.tree import TreeNode
 
+from src.exceptions.custom import TeamAlreadySelectedError
 from src.models.entities import Cycle, Lesson, ModuleGroup, Team
 from src.services.cycle_service import CycleService
 from src.services.modulegroup_service import ModuleGroupService
@@ -89,7 +90,7 @@ class MenuTree(Tree):
                     self._select_team(node, module_id, lesson_id, cycle_id, team_id)
                     self.notify("Успешно добавлено")
 
-            except ValueError as e:
+            except TeamAlreadySelectedError as e:
                 self.notify(str(e), severity="error")
         else:
             self.notify("Нужно выбирать команды", severity="warning")

@@ -13,8 +13,10 @@ class StorageService:
 
     def load_from_file(self) -> dict:
         with open(self.file_name, "r", encoding="utf-8") as file:
+            logger.debug("Succes load from the file")
             return json.load(file)
 
     def save_to_file(self, selection: dict):
         with open(self.file_name, "w", encoding="utf-8") as file:
+            logger.debug("Succes save to the file")
             json.dump(selection, file, ensure_ascii=False, indent=4)

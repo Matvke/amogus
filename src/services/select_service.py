@@ -15,6 +15,7 @@ class SelectService:
 
     @selected.setter
     def selected(self, value):
+        # TODO валидировать
         self._selected = value
 
     def select_team(self, module_id, lesson_id, cycle_id, team_id):

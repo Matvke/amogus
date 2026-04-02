@@ -14,12 +14,6 @@ from src.services.storage_service import StorageService
 from .app import AmogusApp
 from .models.settings import Settings
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.FileHandler("amogus.log")],
-)
-
 
 class BearerAuth(httpx.Auth):
     def __init__(self, token: str) -> None:
@@ -37,8 +31,21 @@ async def async_main():
     parser.add_argument(
         "--env-file", type=str, default=".env", help="Path to .env file (default: .env)"
     )
-
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.FileHandler("amogus.log")],
+        )
+    else:
+        logging.basicConfig(
+            level=logging.ERROR,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.FileHandler("amogus.log")],
+        )
 
     settings = Settings(_env_file=args.env_file)
     auth = BearerAuth(settings.token)
