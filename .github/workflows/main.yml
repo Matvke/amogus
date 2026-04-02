@@ -24,7 +24,6 @@ jobs:
       
       - name: Test backend
         run: |
-          cd reconciliation  
           pip install .
           pip install ruff
           python -m ruff check .
